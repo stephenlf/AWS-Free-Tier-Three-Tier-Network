@@ -262,13 +262,15 @@
               "IpProtocol" : "tcp",
               "FromPort" : 80,
               "ToPort" : 80,
-              "CidrIp" : "0.0.0.0/0"
+              "CidrIp" : "0.0.0.0/0",
+              "Description": "HTTP in"
             },
             {
               "IpProtocol": "tcp",
               "FromPort": 443,
               "ToPort": 443,
-              "CidrIp": "0.0.0.0/0"
+              "CidrIp": "0.0.0.0/0",
+              "Description": "HTTPS in"
             }
           ],
           "SecurityGroupEgress" : [
@@ -276,13 +278,15 @@
               "IpProtocol" : "tcp",
               "FromPort" : 80,
               "ToPort" : 80,
-              "CidrIp" : "0.0.0.0/0"
+              "CidrIp" : "0.0.0.0/0",
+              "Description": "HTTP out"
             },
             {
               "IpProtocol": "tcp",
               "FromPort": 443,
               "ToPort": 443,
-              "CidrIp": "0.0.0.0/0"
+              "CidrIp": "0.0.0.0/0",
+              "Description": "HTTPS out"
             }
           
           ],
@@ -301,8 +305,7 @@
         "InstanceType" : "t2.micro",
         "KeyName" : {"Ref": "KeyName"},
         "PropagateTagsToVolumeOnCreation" : true,
-        "SecurityGroupIds" : [ String, ... ],
-        "SecurityGroups" : [ String, ... ],
+        "SecurityGroupIds" : [{"Ref": "NATSecurityGroup"}],
         "SourceDestCheck" : false,
         "SubnetId" : {"Ref": "PublicSubnet1"},
         "Tags" : [
@@ -320,14 +323,108 @@
           "sysctl -w net.ipv4.ip_forward=1\n",
           "iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE"
         ]]}
+        }
       }
+    },
+    "PublicRouteTable": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+          "Tags" : [
+            {
+              "Key": "Name",
+              "Value": {"Fn::Sub": "${EnvironmentName} PublicRouteTable"}
+            },
+            {
+              "Key": "Watermark",
+              "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+            }
+          ],
+          "VpcId" : {"Ref": "VPC"}
+        }
+    },
+    "PrivateRouteTable": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+          "Tags" : [
+            {
+              "Key": "Name",
+              "Value": {"Fn::Sub": "${EnvironmentName} PrivateRouteTable"}
+            },
+            {
+              "Key": "Watermark",
+              "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+            }
+          ],
+          "VpcId" : {"Ref": "VPC"}
+        }
+    },
+    "PublicInternetRoute": {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "GatewayId" : {"Ref": "InternetGateway"},
+          "RouteTableId": {"Ref": "PublicRouteTable"}
+        }
+    },
+    "PrivateInternetRoute": {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "InstanceId" : {"Ref": "NATInstance1"},
+          "RouteTableId": {"Ref": "PrivateRouteTable"}
+        }
     }
   },
-  "PublicRouteTable": {
+  "Outputs": {
+    "VPCOutput": {
+      "Description" : {"Fn::Sub": "${EnvironmentName} VPC"},
+      "Value" : {"Ref": "VPC"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/VPC"}
+      }
+    },
+    "InternetGatewayOutput": {
+      "Description" : {"Fn::Sub": "${EnvironmentName} InternetGateway"},
+      "Value" : {"Ref": "InternetGateway"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/InternetGateway"}
+      }
+    },
+    "PrivateAppSubnet1Output": {
+      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateAppSubnet1"},
+      "Value" : {"Ref": "PrivateAppSubnet1"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateAppSubnet1"}
+      }
+    },
+    "PrivateAppSubnet2Output": {
+      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateAppSubnet2"},
+      "Value" : {"Ref": "PrivateAppSubnet2"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateAppSubnet2"}
+      }
+    },
+    "PrivateDBSubnet1Output": {
+      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateDBSubnet1"},
+      "Value" : {"Ref": "PrivateDBSubnet1"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateDBSubnet1"}
+      }
+    },
+    "PrivateDBSubnet2Output": {
+      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateDBSubnet2"},
+      "Value" : {"Ref": "PrivateDBSubnet2"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateDBSubnet2"}
+      }
+    },
+    "NatInstance1Output": {
+      "Description" : {"Fn::Sub": "${EnvironmentName} NatInstance1"},
+      "Value" : {"Ref": "NatInstance1"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/NatInstance1"}
+      }
 
-  },
-  "PrivateRouteTable": {
-    
-  },
-  ##Route table associations
+    }
+  }
 }
