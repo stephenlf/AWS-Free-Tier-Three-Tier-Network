@@ -1,5 +1,5 @@
 {
-  "AWS Template Version": "2010-09-09",
+  "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Building off of the VPC template defined at https://docs.aws.amazon.com/codebuild/latest/userguide/cloudformation-vpc-template.html, this template provisions a VPC. Inside, a pair of 3 subnets will be initialized in two availability zones. An internet gateway is provisioned and routes defined to permit the installation of a WordPress app. We also spin up a free-tier NAT Instance on an EC2 t2.micro server and define a NAT security group. CURRENTLY THIS TEMPLATE ONLY WORKS FOR us-east-1. To change regions, please change the NATInstance ImageId first.",
   "Metadata": {
     "AWS::CloudFormation::Interface": {
@@ -29,7 +29,7 @@
       "Description": "An environment name that is prefixed to resource names"
     },
     "VpcCIDR": {
-      "Type": "string",
+      "Type": "String",
       "Default": "10.0.0.0/16",
       "Description": "Please enter the IP range (CIDR notation) for this VPC"
     },
@@ -370,61 +370,60 @@
       "Type" : "AWS::EC2::Route",
       "Properties" : {
           "DestinationCidrBlock" : "0.0.0.0/0",
-          "InstanceId" : {"Ref": "NATInstance1"},
+          "InstanceId" : {"Ref": "NatInstance1"},
           "RouteTableId": {"Ref": "PrivateRouteTable"}
         }
     }
   },
   "Outputs": {
     "VPCOutput": {
-      "Description" : {"Fn::Sub": "${EnvironmentName} VPC"},
+      "Description" : "VPC",
       "Value" : {"Ref": "VPC"},
       "Export" : {
-        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/VPC"}
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-VPC"}
       }
     },
     "InternetGatewayOutput": {
-      "Description" : {"Fn::Sub": "${EnvironmentName} InternetGateway"},
+      "Description" : "InternetGateway",
       "Value" : {"Ref": "InternetGateway"},
       "Export" : {
-        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/InternetGateway"}
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-InternetGateway"}
       }
     },
     "PrivateAppSubnet1Output": {
-      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateAppSubnet1"},
+      "Description" : "PrivateAppSubnet",
       "Value" : {"Ref": "PrivateAppSubnet1"},
       "Export" : {
-        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateAppSubnet1"}
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateAppSubnet1"}
       }
     },
     "PrivateAppSubnet2Output": {
-      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateAppSubnet2"},
+      "Description" : "PrivateAppSubnet",
       "Value" : {"Ref": "PrivateAppSubnet2"},
       "Export" : {
-        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateAppSubnet2"}
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateAppSubnet2"}
       }
     },
     "PrivateDBSubnet1Output": {
-      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateDBSubnet1"},
+      "Description" : "PrivateDBSubnet1",
       "Value" : {"Ref": "PrivateDBSubnet1"},
       "Export" : {
-        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateDBSubnet1"}
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateDBSubnet1"}
       }
     },
     "PrivateDBSubnet2Output": {
-      "Description" : {"Fn::Sub": "${EnvironmentName} PrivateDBSubnet2"},
+      "Description" : "PrivateDBSubnet2",
       "Value" : {"Ref": "PrivateDBSubnet2"},
       "Export" : {
-        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/PrivateDBSubnet2"}
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateDBSubnet2"}
       }
     },
     "NatInstance1Output": {
-      "Description" : {"Fn::Sub": "${EnvironmentName} NatInstance1"},
+      "Description" : "NatInstance1",
       "Value" : {"Ref": "NatInstance1"},
       "Export" : {
-        "Name" : {"Fn::Sub" : "{AWS::StackId}/AWS-Free-Tier-Three-Tier-WordPress/01_Network/NatInstance1"}
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-NatInstance1"}
       }
-
     }
   }
 }
