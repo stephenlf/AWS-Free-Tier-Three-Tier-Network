@@ -83,8 +83,8 @@
       "Type": "AWS::EC2::VPC",
       "Properties": {
         "CidrBlock": {"Ref": "VpcCIDR"},
-        "EnableDNSHostnames": false,
-        "EnableDNSSupport": true,
+        "EnableDnsHostnames": false,
+        "EnableDnsSupport": true,
         "InstanceTenancy": "default",
         "Tags": [
           {
@@ -124,7 +124,6 @@
       "Type": "AWS::EC2::Subnet",
       "Properties": {        
         "VpcId": {"Ref": "VPC"},
-        "AssignIpv6AddressOnCreation" : false,
         "AvailabilityZone" : {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
         "CidrBlock" : {"Ref": "PublicSubnet1CIDR"},
         "EnableDns64" : false,
@@ -146,7 +145,6 @@
       "Type": "AWS::EC2::Subnet",
       "Properties": {        
         "VpcId": {"Ref": "VPC"},
-        "AssignIpv6AddressOnCreation" : false,
         "AvailabilityZone" : {"Fn::Select": [1, {"Fn::GetAZs": ""}]},
         "CidrBlock" : {"Ref": "PublicSubnet2CIDR"},
         "EnableDns64" : false,
@@ -168,7 +166,6 @@
       "Type": "AWS::EC2::Subnet",
       "Properties": {        
         "VpcId": {"Ref": "VPC"},
-        "AssignIpv6AddressOnCreation" : false,
         "AvailabilityZone" : {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
         "CidrBlock" : {"Ref": "PrivateAppSubnet1CIDR"},
         "EnableDns64" : false,
@@ -190,7 +187,6 @@
       "Type": "AWS::EC2::Subnet",
       "Properties": {        
         "VpcId": {"Ref": "VPC"},
-        "AssignIpv6AddressOnCreation" : false,
         "AvailabilityZone" : {"Fn::Select": [1, {"Fn::GetAZs": ""}]},
         "CidrBlock" : {"Ref": "PrivateAppSubnet2CIDR"},
         "EnableDns64" : false,
@@ -212,7 +208,6 @@
       "Type": "AWS::EC2::Subnet",
       "Properties": {        
         "VpcId": {"Ref": "VPC"},
-        "AssignIpv6AddressOnCreation" : false,
         "AvailabilityZone" : {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
         "CidrBlock" : {"Ref": "PrivateDBSubnet1CIDR"},
         "EnableDns64" : false,
@@ -234,7 +229,6 @@
       "Type": "AWS::EC2::Subnet",
       "Properties": {        
         "VpcId": {"Ref": "VPC"},
-        "AssignIpv6AddressOnCreation" : false,
         "AvailabilityZone" : {"Fn::Select": [1, {"Fn::GetAZs": ""}]},
         "CidrBlock" : {"Ref": "PrivateDBSubnet2CIDR"},
         "EnableDns64" : false,
