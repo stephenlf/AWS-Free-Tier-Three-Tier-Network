@@ -1,0 +1,465 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Building off of the VPC template defined at https://docs.aws.amazon.com/codebuild/latest/userguide/cloudformation-vpc-template.html, this template provisions a VPC. Inside, a pair of 3 subnets will be initialized in two availability zones. An internet gateway is provisioned and routes defined to permit the installation of a WordPress app. We also spin up a free-tier NAT Instance on an EC2 t2.micro server and define a NAT security group. CURRENTLY THIS TEMPLATE ONLY WORKS FOR us-east-1. To change regions, please change the NATInstance ImageId first.",
+  "Metadata": {
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": "Configure VPC",
+          "Parameters" : ["EnvironmentName", "VpcCIDR"]
+        },
+        {
+          "Label": "Configure AZ1 Subnets",
+          "Parameters": ["PublicSubnet1CIDR", "PrivateAppSubnet1CIDR", "PrivateDBSubnet1CIDR"]
+        },
+        {
+          "Label": "Configure AZ2 Subnets",
+          "Parameters": ["PublicSubnet2CIDR", "PrivateAppSubnet2CIDR", "PrivateDBSubnet2CIDR"]
+        },
+        {
+          "Label": "Configure NAT Instance Connectivity",
+          "Parameters": ["SSHLocation", "KeyName"]
+        }
+      ]
+    }
+  },
+  "Parameters": {
+    "EnvironmentName": {
+      "Type": "String",
+      "Description": "An environment name that is prefixed to resource names"
+    },
+    "VpcCIDR": {
+      "Type": "String",
+      "Default": "10.0.0.0/16",
+      "Description": "Please enter the IP range (CIDR notation) for this VPC"
+    },
+    "PublicSubnet1CIDR": {
+      "Type": "String",
+      "Default": "10.0.10.0/24",
+      "Description": "Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone"
+    },
+    "PublicSubnet2CIDR": {
+      "Type": "String",
+      "Default": "10.0.11.0/24",
+      "Description": "Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone"
+    },
+    "PrivateAppSubnet1CIDR": {
+      "Type": "String",
+      "Default": "10.0.20.0/24",
+      "Description": "Please enter the IP range (CIDR notation) for the (private) app subnet in the first Availability Zone"
+    },
+    "PrivateAppSubnet2CIDR": {
+      "Type": "String",
+      "Default": "10.0.21.0/24",
+      "Description": "Please enter the IP range (CIDR notation) for the (private) app subnet in the second Availability Zone"
+    },
+    "PrivateDBSubnet1CIDR": {
+      "Type": "String",
+      "Default": "10.0.30.0/24",
+      "Description": "Please enter the IP range (CIDR notation) for the (private) database subnet in the first Availability Zone"
+    },
+    "PrivateDBSubnet2CIDR": {
+      "Type": "String",
+      "Default": "10.0.31.0/24",
+      "Description": "Please enter the IP range (CIDR notation) for the (private) database subnet in the second Availability Zone"
+    },
+    "SSHLocation": {
+      "Description": "The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    },    
+    "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "must be the name of an existing EC2 KeyPair."
+    }
+  },
+  "Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": {"Ref": "VpcCIDR"},
+        "EnableDnsHostnames": false,
+        "EnableDnsSupport": true,
+        "InstanceTenancy": "default",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} VPC"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} Internet Gateway"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "InternetGatewayAttachement": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "InternetGatewayId": {"Ref": "InternetGateway"},
+        "VpcId": {"Ref": "VPC"}
+      }
+    },
+    "PublicSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {        
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone" : {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
+        "CidrBlock" : {"Ref": "PublicSubnet1CIDR"},
+        "EnableDns64" : false,
+        "Ipv6Native" : false,
+        "MapPublicIpOnLaunch" : true,
+        "Tags" : [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} PublicSubnet1"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "PublicSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {        
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone" : {"Fn::Select": [1, {"Fn::GetAZs": ""}]},
+        "CidrBlock" : {"Ref": "PublicSubnet2CIDR"},
+        "EnableDns64" : false,
+        "Ipv6Native" : false,
+        "MapPublicIpOnLaunch" : true,
+        "Tags" : [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} PublicSubnet2"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "PrivateAppSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {        
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone" : {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
+        "CidrBlock" : {"Ref": "PrivateAppSubnet1CIDR"},
+        "EnableDns64" : false,
+        "Ipv6Native" : false,
+        "MapPublicIpOnLaunch" : false,
+        "Tags" : [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} PrivateAppSubnet1"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "PrivateAppSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {        
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone" : {"Fn::Select": [1, {"Fn::GetAZs": ""}]},
+        "CidrBlock" : {"Ref": "PrivateAppSubnet2CIDR"},
+        "EnableDns64" : false,
+        "Ipv6Native" : false,
+        "MapPublicIpOnLaunch" : false,
+        "Tags" : [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} PrivateAppSubnet2"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "PrivateDBSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {        
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone" : {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
+        "CidrBlock" : {"Ref": "PrivateDBSubnet1CIDR"},
+        "EnableDns64" : false,
+        "Ipv6Native" : false,
+        "MapPublicIpOnLaunch" : false,
+        "Tags" : [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} PrivateDBSubnet1"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "PrivateDBSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {        
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone" : {"Fn::Select": [1, {"Fn::GetAZs": ""}]},
+        "CidrBlock" : {"Ref": "PrivateDBSubnet2CIDR"},
+        "EnableDns64" : false,
+        "Ipv6Native" : false,
+        "MapPublicIpOnLaunch" : false,
+        "Tags" : [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} PrivateDBSubnet2"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ]
+      }
+    },
+    "NATSecurityGroup": {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+          "GroupDescription" : "Enables HTTP(s) to and from anywhere.",
+          "GroupName" : {"Fn::Sub": "${EnvironmentName} NATSecurityGroup"},
+          "SecurityGroupIngress" : [
+            {
+              "IpProtocol" : "tcp",
+              "FromPort" : 80,
+              "ToPort" : 80,
+              "CidrIp" : "0.0.0.0/0",
+              "Description": "HTTP in"
+            },
+            {
+              "IpProtocol": "tcp",
+              "FromPort": 443,
+              "ToPort": 443,
+              "CidrIp": "0.0.0.0/0",
+              "Description": "HTTPS in"
+            }
+          ],
+          "SecurityGroupEgress" : [
+            {
+              "IpProtocol" : "tcp",
+              "FromPort" : 80,
+              "ToPort" : 80,
+              "CidrIp" : "0.0.0.0/0",
+              "Description": "HTTP out"
+            },
+            {
+              "IpProtocol": "tcp",
+              "FromPort": 443,
+              "ToPort": 443,
+              "CidrIp": "0.0.0.0/0",
+              "Description": "HTTPS out"
+            }
+          
+          ],
+          "Tags" : [{
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }],
+          "VpcId" : {"Ref": "VPC"}
+        }
+    },
+    "NatInstance1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {"Fn::Select": [0, {"Fn::GetAZs": ""}]},
+        "ImageId" : "ami-0dfcb1ef8550277af",
+        "InstanceType" : "t2.micro",
+        "KeyName" : {"Ref": "KeyName"},
+        "PropagateTagsToVolumeOnCreation" : true,
+        "SecurityGroupIds" : [{"Ref": "NATSecurityGroup"}],
+        "SourceDestCheck" : false,
+        "SubnetId" : {"Ref": "PublicSubnet1"},
+        "Tags" : [
+          {
+            "Key" : "Name",
+            "Value": {"Fn::Sub": "${EnvironmentName} NATInstance1"}
+          },
+          {
+            "Key": "Watermark",
+            "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+          }
+        ],
+        "UserData" : {"Fn::Base64": { "Fn::Join" : ["", [
+          "#!/bin/bash\n",
+          "sysctl -w net.ipv4.ip_forward=1\n",
+          "iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE"
+        ]]}
+        }
+      }
+    },
+    "PublicRouteTable": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+          "Tags" : [
+            {
+              "Key": "Name",
+              "Value": {"Fn::Sub": "${EnvironmentName} PublicRouteTable"}
+            },
+            {
+              "Key": "Watermark",
+              "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+            }
+          ],
+          "VpcId" : {"Ref": "VPC"}
+        }
+    },
+    "PrivateRouteTable": {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+          "Tags" : [
+            {
+              "Key": "Name",
+              "Value": {"Fn::Sub": "${EnvironmentName} PrivateRouteTable"}
+            },
+            {
+              "Key": "Watermark",
+              "Value": "https://github.com/stephenlf/AWS-Free-Tier-Three-Tier-WordPress"
+            }
+          ],
+          "VpcId" : {"Ref": "VPC"}
+        }
+    },
+    "PublicInternetRoute": {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "GatewayId" : {"Ref": "InternetGateway"},
+          "RouteTableId": {"Ref": "PublicRouteTable"}
+        }
+    },
+    "PrivateInternetRoute": {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "InstanceId" : {"Ref": "NatInstance1"},
+          "RouteTableId": {"Ref": "PrivateRouteTable"}
+        }
+    },
+    "PublicSubnet1ToPublicRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PublicRouteTable"},
+          "SubnetId" : {"Ref":"PublicSubnet1"}
+        }
+    },
+    "PublicSubnet2ToPublicRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PublicRouteTable"},
+          "SubnetId" : {"Ref":"PublicSubnet2"}
+        }
+    },
+    "PrivateAppSubnet1ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateAppSubnet1"}
+        }
+    },
+    "PrivateAppSubnet2ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateAppSubnet2"}
+        }
+    },
+    "PrivateDBSubnet1ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateDBSubnet1"}
+        }
+    },
+    "PrivateDBSubnet2ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateDBSubnet2"}
+        }
+    }
+  },
+  "Outputs": {
+    "VPCOutput": {
+      "Description" : "VPC",
+      "Value" : {"Ref": "VPC"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-VPC"}
+      }
+    },
+    "InternetGatewayOutput": {
+      "Description" : "InternetGateway",
+      "Value" : {"Ref": "InternetGateway"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-InternetGateway"}
+      }
+    },
+    "PrivateAppSubnet1Output": {
+      "Description" : "PrivateAppSubnet",
+      "Value" : {"Ref": "PrivateAppSubnet1"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateAppSubnet1"}
+      }
+    },
+    "PrivateAppSubnet2Output": {
+      "Description" : "PrivateAppSubnet",
+      "Value" : {"Ref": "PrivateAppSubnet2"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateAppSubnet2"}
+      }
+    },
+    "PrivateDBSubnet1Output": {
+      "Description" : "PrivateDBSubnet1",
+      "Value" : {"Ref": "PrivateDBSubnet1"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateDBSubnet1"}
+      }
+    },
+    "PrivateDBSubnet2Output": {
+      "Description" : "PrivateDBSubnet2",
+      "Value" : {"Ref": "PrivateDBSubnet2"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-PrivateDBSubnet2"}
+      }
+    },
+    "NatInstance1Output": {
+      "Description" : "NatInstance1",
+      "Value" : {"Ref": "NatInstance1"},
+      "Export" : {
+        "Name" : {"Fn::Sub" : "${AWS::StackName}-AWSFreeTierThreeTierWordPress-01Network-NatInstance1"}
+      }
+    }
+  }
+}
