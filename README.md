@@ -1,4 +1,4 @@
-# AWS Free-Tier/Three-Tiered WordPress App
+# AWS Free-Tier/Three-Tiered Network
 This repo contains AWS CloudFormation Templates and dependencies to create a WordPress blog in AWS. The app will be loaded into a three-tier, secure VPC. Nevertheless, these templates will ONLY initiate free-tier resources.
 
 This project serves more to build experience than to solve any practical issues associated with hosting a wordpress app on AWS. However, some of the cost-saving measures I implemented (such as running a NAT Instance rather than a NAT gateway, see section 4) may be of interest to individuals or small dev/test teams.
@@ -6,9 +6,8 @@ This project serves more to build experience than to solve any practical issues 
 ## Table of Contents
 1. Architectural overview
 2. Initialize the VPC
-3. Prepare Security Groups
-4. Start RDS MySQL Server and EC2 Instances
-6. Configure WordPress
+3. Start RDS MySQL Server, WP EC2 Instance, and configure Bastion host
+4. Configure WordPress
 
 ## Architectural Overview
 This WordPress app is built on three-tier architecture. The design of the three tiers (presentation tier, app tier, and data tier) is modelled after the [WordPress: Best Practices on AWS](https://aws.amazon.com/blogs/architecture/wordpress-best-practices-on-aws/) whitepaper. 
@@ -28,10 +27,62 @@ Note that I opt to create a NAT Instance out of an EC2 instance, rather than use
 
 <Details><Summary>See the architectural diagram</summary>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/assets/WordPress Architecture Dark Mode.jpeg" | width=750>
+  <source media="(prefers-color-scheme: dark)" srcset="/assets/WordPress Architecture DarkMode.jpeg" | width=750>
   <source media="(prefers-color-scheme: light)" srcset="/assets/WordPress Architecture.jpeg" | width=750>
-  <img alt="A diagram of the architecture that is created with these CloudFormation Templates." src="/assets/WordPress Architecture Dark Mode.jpeg" | width=750>
+  <img alt="A diagram of the architecture that is created with these CloudFormation Templates." src="/assets/WordPress Architecture DarkMode.jpeg" | width=750>
 </picture>
 </Details>
 
 ## Initialize the VPC
+#### TEMPLATE: 01_Network.json
+This template lays down the necessary networking infrastructure for the app and database servers to come. The architecture is initialized in the first two AZs (alphabetically) in the region from which the template is run in CloudFormation. 
+
+Instead of a NAT Gateway (which can cost nearly $40/month), an EC2 instance is spun up and configured to act as a NAT Instance. To be clear, NAT Gateways are better than this NAT Instance in nearly every environment. They are fully managed, scalable, and highly available. I only went with a NAT Instance as a cost-saving measure.
+
+To configure the NAT Instance, I disable `SourceDestCheck` and run the following bootstrap script:
+```
+#!/bin/bash
+sysctl -w net.ipv4.ip_forward=1
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+```
+This design of this NAT instance was inspired by a [blog post](https://www.kabisa.nl/tech/cost-saving-with-nat-instances/) by Luk van den Borne from 2019. 
+
+**NOTE: THE AMI USED FOR THIS INSTANCE IS ONLY AVAILABLE IN us-east-1.** To create a stack in a different region, change the AMI ID to one belonging to an Amazon Linux 2 image in your region.
+
+<Details><Summary>See parameters</summary>
+
+ |Parameter|Function|
+ |---|---|
+ |EnvironmentName | An environment name that is prefixed to resource names |
+ | VpcCIDR | Please enter the IP range (CIDR notation) for this VPC |
+ | PublicSubnet1CIDR | Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone |
+ | PublicSubnet2CIDR | Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone |        
+ | PrivateAppSubnet1CIDR | Please enter the IP range (CIDR notation) for the (private) app subnet in the first Availability Zone |
+ | PrivateAppSubnet2CIDR | Please enter the IP range (CIDR notation) for the (private) app subnet in the second Availability Zone |
+ | PrivateDBSubnet1CIDR | Please enter the IP range (CIDR notation) for the (private) database subnet in the first Availability Zone |
+ | PrivateDBSubnet2CIDR | Please enter the IP range (CIDR notation) for the (private) database subnet in the second Availability Zone |
+ | SSHLocation | The IP address range that can be used to SSH to the EC2 instances |
+ | KeyName | Name of an existing EC2 KeyPair to enable SSH access to the NAT instance. Note that the Securit Group associated with the NAT instance does not allow SSH traffic. However, the same instance will later be configured as a Bastion host which *does* allow SSH. |
+ </Details>
+
+<Details><Summary>See resources</summary>
+
+ |Resource|Description|
+ |---|---|
+ VPC|A virtual private cloud with the CIDR block specified in the parameters
+ InternetGateway|Default Internet Gateway
+ InternetGatewayAttachment|Connect Internet Gateway to VPC
+ PublicSubnet1 and PublicSubnet2|Makes a call to `"Fn::GetAZs"` to get a list of AZs in the region you are running the template in. Initializes a subnet in the first (Subnet1) or second (Subnet2) AZ in the region (alphabetically). `MapPublicIpOnLaunch` is set to `true`.
+PrivateAppSubnet1/2 and PrivateDBSubnet1/2|Makes a call to `"Fn::GetAZs"` to get a list of AZs in the region you are running the template in. Initializes a subnet in the first (Subnet1) or second (Subnet2) AZ in the region (alphabetically).
+NATSecurityGroup|Security group to be used by the NAT Instance. Enables HTTP/HTTPS communication to and from any IP.
+NATInstance1|Initializes an t2.micro (free-tier) EC2 instance inside PublicSubnet1. The bootstrap script and `SourceDestCheck=false` attribute together enable IP forwarding (i.e. NAT funcationality). An SSH key pair is associated with the instance for later use. **NOTE: THE AMI USED FOR THIS INSTANCE IS ONLY AVAILABLE IN us-east-1.**
+PublicRouteTable and PublicInternetRoute|Creates a route to the internet through the Internet Gateway.
+PrivateRouteTable and PrivateInternetRoute|Creates a route to the internet through the NAT Instance.
+___RouteTableAssociation|Associates each of the subnets with either PublicRouteTable (public subnets) or PrivateRouteTable (private subnets).
+</details>
+
+## Start RDS MySQL Server, WP EC2 Instance, and Configure Bastion Host
+Work-in-progress
+
+## Configure WordPress
+Work-in-progress

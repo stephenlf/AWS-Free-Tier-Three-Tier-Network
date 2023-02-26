@@ -367,6 +367,48 @@
           "InstanceId" : {"Ref": "NatInstance1"},
           "RouteTableId": {"Ref": "PrivateRouteTable"}
         }
+    },
+    "PublicSubnet1ToPublicRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PublicRouteTable"},
+          "SubnetId" : {"Ref":"PublicSubnet1"}
+        }
+    },
+    "PublicSubnet2ToPublicRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PublicRouteTable"},
+          "SubnetId" : {"Ref":"PublicSubnet2"}
+        }
+    },
+    "PrivateAppSubnet1ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateAppSubnet1"}
+        }
+    },
+    "PrivateAppSubnet2ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateAppSubnet2"}
+        }
+    },
+    "PrivateDBSubnet1ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateDBSubnet1"}
+        }
+    },
+    "PrivateDBSubnet2ToPrivateRouteTableAssociation": {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+          "RouteTableId" : {"Ref": "PrivateRouteTable"},
+          "SubnetId" : {"Ref":"PrivateDBSubnet2"}
+        }
     }
   },
   "Outputs": {
