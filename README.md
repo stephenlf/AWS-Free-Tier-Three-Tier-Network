@@ -9,6 +9,12 @@ This project serves more to build experience than to solve any practical issues 
 2. Template details
 
 ## Installation Instructions
+Installation is easy. All you need is the "01_Network.json" CloudFormation template.
+1. Decide which region you would like to create these resources in. 
+2. Find the ImageID for the Amazon Linux 2 free-tier eligible AMI in your region.
+3. Download and open "01_Network.json" and replace the "ImageID" (line 298) with the ID appropriate for your region. The template comes pre-configured to work for us-east-1, current as of 2023-02-25.
+4. Upload the modified "01_Network.json" file to CloudFormation and create a new stack. Be sure to use an IAM user or assign a CloudFormation role that can create VPC resources and EC2 instances.
+5. CloudFormation will prompt for more information as necessary.
 
 ## Architectural Overview
 This network is built on three-tier architecture. The design of the three tiers (presentation tier, app tier, and data tier) is modelled after the [WordPress: Best Practices on AWS](https://aws.amazon.com/blogs/architecture/wordpress-best-practices-on-aws/) whitepaper. 
