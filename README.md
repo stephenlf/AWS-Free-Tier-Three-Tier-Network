@@ -29,7 +29,7 @@ Note that I opt to create a NAT Instance out of an EC2 instance, rather than use
 <Details><Summary>See the architectural diagram</summary>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="/assets/WordPress Architecture DarkMode.jpeg" | width=750>
-  <source media="(prefers-color-scheme: light)" srcset="/assets/WordPress Architecture.jpeg" | width=750>
+  <source media="(prefers-color-scheme: light)" srcset="/assets/WordPress Architecture DarkMode.jpeg" | width=750>
   <img alt="A diagram of the architecture that is created with these CloudFormation Templates." src="/assets/WordPress Architecture DarkMode.jpeg" | width=750>
 </picture>
 </Details>
